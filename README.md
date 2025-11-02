@@ -48,7 +48,7 @@ This project requires a two-part deployment: the **API Backend** on Render and t
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [YOUR_REPO_URL]
+    git clone https://github.com/manisharyal2001/Waste-Classifier
     cd Smart-Waste-Classifier
     ```
 2.  **Install Dependencies:**
