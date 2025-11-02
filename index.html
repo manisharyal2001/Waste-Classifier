@@ -189,6 +189,8 @@
     const resultPlaceholder = document.getElementById('result-placeholder');
     const confidencePlaceholder = document.getElementById('confidence-placeholder');
 
+    // 🚨 CRITICAL CHANGE: Define your live Render API URL here!
+    const RENDER_API_URL = 'https://waste-classifier-meyl.onrender.com';
 
     async function setupCamera() {
       try {
@@ -243,7 +245,8 @@
         formData.append('file', blob, 'cropped_capture.jpg');
 
         try {
-          const response = await fetch('http://127.0.0.1:5000/predict', {
+          // 🛑 CRITICAL LINE: Fetch now uses the live Render URL
+          const response = await fetch(`${RENDER_API_URL}/predict`, { 
             method: 'POST',
             body: formData
           });
@@ -284,6 +287,6 @@
     });
 
     setupCamera();
-  </script>
+</script>
 </body>
 </html>
