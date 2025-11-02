@@ -24,7 +24,7 @@ This project is a full-stack ML application split into a Python backend and a Ja
 | Component | Purpose |
 | :--- | :--- |
 | **Python** | Core programming language (3.8+)  |
-| **Flask** | Web framework for the API server [cite: 109] |
+| **Flask** | Web framework for the API server  |
 | **TensorFlow/Keras** | Deep Learning library for model building and inference  |
 | **MobileNetV2** | Base CNN model used for classification |
 | **OpenCV** | Image preprocessing and object cropping |
@@ -61,7 +61,7 @@ This project requires a two-part deployment: the **API Backend** on Render and t
 4.  **Run the Backend:**
     ```bash
     python app.py
-    # This will typically run on [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
+   
     ```
 5.  **View Frontend:** Open the main HTML file (e.g., `index.html`) in your browser. (Note: You may need to update the API endpoint in the JS file to `http://127.0.0.1:5000/predict` for local testing).
 
