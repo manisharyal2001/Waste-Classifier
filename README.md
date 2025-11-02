@@ -1,6 +1,6 @@
 # ♻️ Smart Waste Classifier
 
-The **Smart Waste Classifier** is an intelligent web application designed to promote sustainable waste management by automatically identifying and categorizing waste materials using **Deep Learning** and **Computer Vision**. [cite_start]Users can capture a live photo or upload an image of a waste item, and the system provides an instant, highly accurate classification result[cite: 5, 20, 413].
+The **Smart Waste Classifier** is an intelligent web application designed to promote sustainable waste management by automatically identifying and categorizing waste materials using **Deep Learning** and **Computer Vision**. Users can capture a live photo or upload an image of a waste item, and the system provides an instant, highly accurate classification result.
 
 
 
@@ -8,11 +8,11 @@ The **Smart Waste Classifier** is an intelligent web application designed to pro
 
 ## ✨ Features
 
-* [cite_start]**Intelligent Classification:** Uses a fine-tuned **MobileNetV2 CNN** model, leveraging Transfer Learning, to classify waste into 10 categories (e.g., Plastic, Metal, Glass, Paper, Biological, etc.)[cite: 7, 23, 374].
-* [cite_start]**High Accuracy:** The model achieves a robust **validation accuracy of over 90%**[cite: 36, 78, 416].
-* [cite_start]**Automatic Object Cropping:** The **Flask** backend uses **OpenCV** to detect the largest contour of the waste item, cropping the image to remove background noise and ensure the model receives a clean, focused input for better prediction accuracy[cite: 40, 41, 167, 369, 370].
-* [cite_start]**Real-Time Interface:** The frontend is built with HTML, CSS, and JavaScript, enabling live camera access and instantaneous display of the predicted waste category and confidence score[cite: 50, 51, 57, 145].
-* [cite_start]**API Communication:** Uses a **Flask REST API** (`/predict` endpoint) to handle image reception, preprocessing, and model inference, with **Flask-CORS** enabled for seamless cross-origin communication[cite: 43, 44, 48, 159, 174].
+* **Intelligent Classification:** Uses a fine-tuned **MobileNetV2 CNN** model, leveraging Transfer Learning, to classify waste into 10 categories (e.g., Plastic, Metal, Glass, Paper, Biological, etc.).
+* **High Accuracy:** The model achieves a robust **validation accuracy of over 90%**.
+* **Automatic Object Cropping:** The **Flask** backend uses **OpenCV** to detect the largest contour of the waste item, cropping the image to remove background noise and ensure the model receives a clean, focused input for better prediction accuracy.
+* **Real-Time Interface:** The frontend is built with HTML, CSS, and JavaScript, enabling live camera access and instantaneous display of the predicted waste category and confidence score.
+* **API Communication:** Uses a **Flask REST API** (`/predict` endpoint) to handle image reception, preprocessing, and model inference, with **Flask-CORS** enabled for seamless cross-origin communication.
 
 ---
 
@@ -23,20 +23,20 @@ This project is a full-stack ML application split into a Python backend and a Ja
 ### Backend (Python API - Deployed on **Render**)
 | Component | Purpose |
 | :--- | :--- |
-| **Python** | [cite_start]Core programming language (3.8+) [cite: 108] |
-| **Flask** | [cite_start]Web framework for the API server [cite: 109] |
-| **TensorFlow/Keras** | [cite_start]Deep Learning library for model building and inference [cite: 110] |
-| **MobileNetV2** | [cite_start]Base CNN model used for classification [cite: 33] |
-| **OpenCV** | [cite_start]Image preprocessing and object cropping [cite: 39, 111] |
-| **`flask-cors`** | [cite_start]Enables cross-origin requests [cite: 119] |
+| **Python** | Core programming language (3.8+)  |
+| **Flask** | Web framework for the API server [cite: 109] |
+| **TensorFlow/Keras** | Deep Learning library for model building and inference  |
+| **MobileNetV2** | Base CNN model used for classification |
+| **OpenCV** | Image preprocessing and object cropping |
+| **`flask-cors`** | Enables cross-origin requests  |
 | **`gunicorn`** | Production WSGI server for Render deployment |
 
 ### Frontend (Web UI - Deployed on **Netlify**)
 | Component | Purpose |
 | :--- | :--- |
-| **HTML5** | [cite_start]Structure of the web interface [cite: 114] |
-| **CSS3** | [cite_start]Styling and responsive design [cite: 115] |
-| **JavaScript (ES6)** | [cite_start]Client-side scripting, camera access, and API calls [cite: 116] |
+| **HTML5** | Structure of the web interface  |
+| **CSS3** | Styling and responsive design |
+| **JavaScript (ES6)** | Client-side scripting, camera access, and API calls  |
 
 ---
 
@@ -57,7 +57,7 @@ This project requires a two-part deployment: the **API Backend** on Render and t
         ```bash
         pip install -r requirements.txt
         ```
-3.  [cite_start]**Download Model:** Place the pre-trained model file (`waste_classifier_model.h5` [cite: 37]) in your root directory.
+3.  **Download Model:** Place the pre-trained model file (`waste_classifier_model.h5` ) in your root directory.
 4.  **Run the Backend:**
     ```bash
     python app.py
