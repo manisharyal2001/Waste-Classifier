@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Waste Classifier</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #334155;
+      --primary: #2563eb;
+      --success: #16a34a;
+      --error: #dc2626;
+      --info: #3b82f6; /* Added for general info */
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 16px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 24px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      padding: 24px;
+      width: 360px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      /* Reduced bottom margin as prediction results are moved */
+      margin-bottom: 16px; 
+    }
+
+    video {
+      border-radius: 0.75rem;
+      width: 100%;
+      height: auto;
+      position: relative;
+    }
+
+    /* 🔲 Focus Box */
+    .focus-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60%; 
+      height: 45%; 
+      transform: translate(-50%, -50%);
+      border: 2px solid var(--primary);
+      border-radius: 0.5rem;
+      box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 0.75rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 20px;
+      width: 100%;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    .loader {
+      border: 3px solid #e2e8f0;
+      border-top: 3px solid var(--primary);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      animation: spin 1s linear infinite;
+      display: none;
+      margin: 20px auto 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Moved these styles to the cropped-container for prediction results */
+    .result-text {
+      font-weight: 700;
+      margin-top: 16px;
+      color: var(--success);
+      font-size: 1.25rem;
+    }
+
+    .confidence-text {
+      font-size: 1rem;
+      color: var(--info);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* --- New Cropped Section Styles --- */
+    .cropped-container {
+        margin-top: 10px;
+        width: 360px;
+        text-align: center;
+        background: var(--card);
+        border-radius: 1rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+        padding: 24px;
+        display: none; /* Initially hidden */
+    }
+
+    .cropped-container h2 {
+        color: var(--primary);
+        font-size: 1.25rem;
+        margin-bottom: 15px;
+    }
+
+    #croppedImage {
+        max-width: 100%;
+        border-radius: 0.75rem;
+        border: 2px solid var(--primary);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    footer {
+      margin-top: 20px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <h1>♻️ Smart Waste Classifier</h1>
+
+  <div class="card">
+    <video id="camera" autoplay playsinline></video>
+    <div class="focus-box"></div>
+    <canvas id="snapshot" style="display:none;"></canvas> 
+    <button id="captureBtn">Capture & Predict</button>
+    <div class="loader" id="loader"></div> 
+    
+    <div class="result" id="result-placeholder" style="display:none;"></div>
+    <div class="confidence" id="confidence-placeholder" style="display:none;"></div>
+  </div>
+
+  <div class="cropped-container" id="croppedContainer">
+    <h2> Waste Captured </h2>
+    <img id="croppedImage" src="" alt="Cropped object from focus box" />
+    
+    <div class="result-text" id="result-display"></div>
+    <div class="confidence-text" id="confidence-display"></div>
+  </div>
+
+  <footer>© 2025 SmartWaste AI</footer>
+
+  <script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('snapshot');
+    const loader = document.getElementById('loader');
+    const captureBtn = document.getElementById('captureBtn');
+    const croppedContainer = document.getElementById('croppedContainer');
+    const croppedImage = document.getElementById('croppedImage');
+    
+    // New result display elements
+    const resultDisplay = document.getElementById('result-display');
+    const confidenceDisplay = document.getElementById('confidence-display');
+    
+    // Hidden placeholders (now unused)
+    const resultPlaceholder = document.getElementById('result-placeholder');
+    const confidencePlaceholder = document.getElementById('confidence-placeholder');
+
+
+    async function setupCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+      } catch (error) {
+        alert("Please allow camera access to use this feature.");
+      }
+    }
+
+    captureBtn.addEventListener('click', async () => {
+      // 1. Reset UI
+      resultDisplay.textContent = '';
+      confidenceDisplay.textContent = '';
+      croppedContainer.style.display = 'none'; 
+      loader.style.display = 'block';
+
+      // Based on CSS: 60% width, 45% height, centered.
+      const cropPercentW = 0.60;
+      const cropPercentH = 0.45;
+      const offsetX = (1 - cropPercentW) / 2;
+      const offsetY = (1 - cropPercentH) / 2; 
+
+      // 2. Draw the full video frame onto the hidden canvas
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth; 
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // 3. Calculate crop coordinates on the actual video resolution
+      const cropX = canvas.width * offsetX;
+      const cropY = canvas.height * offsetY;
+      const cropW = canvas.width * cropPercentW;
+      const cropH = canvas.height * cropPercentH;
+
+      // 4. Create a temporary canvas for the cropped image
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = cropW;
+      croppedCanvas.height = cropH;
+      const croppedContext = croppedCanvas.getContext('2d');
+
+      // 5. Draw the cropped section from the original canvas to the temporary canvas
+      croppedContext.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+      // 6. Display the cropped image in the new section
+      croppedImage.src = croppedCanvas.toDataURL('image/jpeg');
+      croppedContainer.style.display = 'block';
+
+      // 7. Send the cropped image (blob) to the server for prediction
+      croppedCanvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('file', blob, 'cropped_capture.jpg');
+
+        try {
+          const response = await fetch('http://127.0.0.1:5000/predict', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+          loader.style.display = 'none';
+
+          if (data.error) {
+            resultDisplay.textContent = '❌ ' + data.error;
+            resultDisplay.style.color = '#dc2626';
+            confidenceDisplay.textContent = '';
+          } else {
+            // Display results in the new section
+            resultDisplay.textContent = 'Predicted: ' + data.predicted_class;
+            resultDisplay.style.color = '#16a34a';
+
+            // Correctly format confidence: assumes server returns a value between 0 and 1, 
+            // but handles large numbers by dividing by 100 if > 1 for robustness.
+            let rawConfidence = parseFloat(data.confidence);
+            if (rawConfidence > 100) {
+              // Heuristic to handle 8196.00 which likely meant 0.8196 * 10000
+              rawConfidence = rawConfidence / 10000; 
+            } else if (rawConfidence > 1) {
+              // Heuristic to handle numbers like 81.96 which meant 81.96%
+              rawConfidence = rawConfidence / 100;
+            }
+
+            const conf = (rawConfidence * 100).toFixed(2);
+            confidenceDisplay.textContent = 'Confidence: ' + conf + '%';
+            confidenceDisplay.style.color = '#3b82f6'; // Use blue for info/confidence
+          }
+        } catch (err) {
+          loader.style.display = 'none';
+          resultDisplay.textContent = '⚠️ Server not responding.';
+          resultDisplay.style.color = '#dc2626';
+          confidenceDisplay.textContent = 'Check server connection.';
+        }
+      }, 'image/jpeg', 0.9);
+    });
+
+    setupCamera();
+  </script>
+</body>
+</html>
