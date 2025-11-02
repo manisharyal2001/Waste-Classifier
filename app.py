@@ -9,12 +9,14 @@ from PIL import Image
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
+import os  # 👈 NEW: Import os for environment port check
 
 # =============================
 # 1️⃣ Configuration
 # =============================
-MODEL_PATH = r'C:\Users\manis\Desktop\Study\Waste\waste_classifier_model.h5'
-CLASSES_PATH = r'C:\Users\manis\Desktop\Study\Waste\class_indices.json'
+# 🚨 CRITICAL FIX: Use RELATIVE paths, assuming files are in the same directory as app.py
+MODEL_PATH = 'waste_classifier_model.h5'
+CLASSES_PATH = 'class_indices.json'
 TARGET_SIZE = (224, 224)
 
 # =============================
@@ -23,6 +25,7 @@ TARGET_SIZE = (224, 224)
 model = None
 CLASS_LABELS = []
 try:
+    # Load model and classes only once when the server starts
     model = load_model(MODEL_PATH)
     with open(CLASSES_PATH, "r") as f:
         class_indices = json.load(f)
@@ -30,7 +33,8 @@ try:
     print("✅ Model and Class Labels loaded successfully.")
     print("Class Labels:", CLASS_LABELS)
 except Exception as e:
-    print(f"❌ Error during setup: {e}")
+    # This print statement is vital for debugging in Render logs!
+    print(f"❌ Error during setup: Failed to load model or classes: {e}")
 
 # =============================
 # 3️⃣ Flask App Setup
@@ -39,7 +43,7 @@ app = Flask(__name__)
 CORS(app)  # Allow frontend connection
 
 # =============================
-# 4️⃣ Helper Functions
+# 4️⃣ Helper Functions (NO CHANGES HERE - KEEP AS IS)
 # =============================
 
 def crop_object(pil_image):
@@ -87,7 +91,7 @@ def preprocess_image(img_file):
 
 
 # =============================
-# 5️⃣ Prediction Route
+# 5️⃣ Prediction Route (NO CHANGES HERE - KEEP AS IS)
 # =============================
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -126,4 +130,6 @@ def predict():
 # 6️⃣ Run Server
 # =============================
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # 🚨 CRITICAL FIX: Use environment PORT for Render and host 0.0.0.0 for deployment
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
