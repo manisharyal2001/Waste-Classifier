@@ -1,15 +1,14 @@
-# app.py - Flask Backend Server (with Object Cropping)
-
-import tensorflow as tf
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
+import tensorflow as tf
 import numpy as np
-import io
-import json
 from PIL import Image
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import io
 import cv2
+import json
+import os
 
 # ---------------------------------------------------
 # ⚙️ Configuration
@@ -18,8 +17,11 @@ MODEL_PATH = 'waste_classifier_model.h5'
 CLASSES_PATH = 'class_indices.json'
 TARGET_SIZE = (224, 224)
 
+app = Flask(__name__, static_folder="static")
+CORS(app)
+
 # ---------------------------------------------------
-# ✅ Load Model and Classes
+# ✅ Load model & labels
 # ---------------------------------------------------
 model = None
 CLASS_LABELS = []
@@ -31,27 +33,18 @@ try:
         class_indices = json.load(f)
 
     CLASS_LABELS = sorted(class_indices, key=class_indices.get)
-
-    print("✅ Model loaded successfully, classes:", CLASS_LABELS)
+    print("✅ Model loaded successfully:", CLASS_LABELS)
 
 except Exception as e:
-    print(f"❌ Error loading model or class labels: {e}")
+    print("❌ Error loading model:", e)
 
 
 # ---------------------------------------------------
-# 🌐 Flask Setup (IMPORTANT: static_folder="static")
-# ---------------------------------------------------
-app = Flask(__name__, static_folder="static")
-CORS(app)
-
-
-# ---------------------------------------------------
-# ✂️ Function: Crop main object from image
+# ✂️ Crop object from the image
 # ---------------------------------------------------
 def crop_object(pil_image):
     try:
         img_cv = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
-
         gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)
 
@@ -63,28 +56,24 @@ def crop_object(pil_image):
             x, y, w, h = cv2.boundingRect(c)
             padding = 10
 
-            x = max(0, x - padding)
-            y = max(0, y - padding)
-            x_end = min(img_cv.shape[1], x + w + 2 * padding)
-            y_end = min(img_cv.shape[0], y + h + 2 * padding)
+            cropped = img_cv[max(0, y - padding):y + h + padding,
+                             max(0, x - padding):x + w + padding]
 
-            cropped = img_cv[y:y_end, x:x_end]
-            cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-            return Image.fromarray(cropped)
+            return Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
 
         return pil_image
 
     except Exception as e:
-        print(f"⚠️ Cropping failed: {e}")
+        print("⚠️ Cropping failed:", e)
         return pil_image
 
 
 # ---------------------------------------------------
-# 🔄 Preprocess image for prediction
+# 🔄 Preprocess image
 # ---------------------------------------------------
 def preprocess_image(img_file):
     try:
-        img = Image.open(io.BytesIO(img_file.read())).convert('RGB')
+        img = Image.open(io.BytesIO(img_file.read())).convert("RGB")
         img = crop_object(img)
         img = img.resize(TARGET_SIZE)
 
@@ -92,45 +81,44 @@ def preprocess_image(img_file):
         return np.expand_dims(img_array, axis=0)
 
     except Exception as e:
-        print(f"⚠️ Preprocessing failed: {e}")
+        print("⚠️ Preprocessing failed:", e)
         return None
 
 
 # ---------------------------------------------------
-# 🌍 ROUTES
+# 🌐 ROUTES
 # ---------------------------------------------------
 
-# ✅ ROOT → Serve index.html directly
+# ✅ When user opens link → load index.html
 @app.route('/')
-def home():
-    return app.send_static_file('index.html')
+def serve_home():
+    return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if model is None:
-        return jsonify({'error': 'Model not loaded on server.'}), 500
+        return jsonify({"error": "Model not loaded."}), 500
 
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded.'}), 400
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded."}), 400
 
-    file = request.files['file']
-    img_data = preprocess_image(file)
+    img = preprocess_image(request.files["file"])
 
-    if img_data is None:
-        return jsonify({'error': 'Failed to process image.'}), 400
+    if img is None:
+        return jsonify({"error": "Error processing image."}), 400
 
-    prediction = model.predict(img_data)
+    prediction = model.predict(img)
     probabilities = prediction[0]
-
     index = int(np.argmax(probabilities))
-    predicted_label = CLASS_LABELS[index]
+
+    predicted_label = CLASS_LABELS[index].upper()
     confidence = float(probabilities[index]) * 100
 
     return jsonify({
-        'predicted_class': predicted_label.upper(),
-        'confidence': f"{confidence:.2f}%",
-        'all_confidences': {
+        "predicted_class": predicted_label,
+        "confidence": f"{confidence:.2f}%",
+        "all_confidences": {
             label.upper(): f"{float(prob) * 100:.2f}%"
             for label, prob in zip(CLASS_LABELS, probabilities)
         }
@@ -138,7 +126,9 @@ def predict():
 
 
 # ---------------------------------------------------
-# 🚀 Run Flask Server (shows link in terminal)
+# 🚀 Run Flask Server
 # ---------------------------------------------------
 if __name__ == '__main__':
+    print("\n✅ Smart Waste Classifier Backend Running")
+    print("➡ Open on browser: http://127.0.0.1:5000/")
     app.run(host='0.0.0.0', port=5000, debug=True)

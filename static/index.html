@@ -121,6 +121,12 @@
   <footer class="mt-12 text-sm text-gray-400">© 2025 AI-Powered Recycling System</footer>
 
   <script>
+    const DEPLOYED_BACKEND_URL = "https://YOUR-BACKEND-URL/predict"; // <-- UPDATE THIS LINE ONLY
+
+    const SERVER_URL = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://127.0.0.1:5000/predict"
+      : DEPLOYED_BACKEND_URL;
+
     const video = document.getElementById('camera');
     const canvas = document.getElementById('snapshot');
     const loader = document.getElementById('loader');
@@ -132,7 +138,6 @@
 
     const cropPercentW = 0.60;
     const cropPercentH = 0.45;
-    const SERVER_URL = 'http://127.0.0.1:5000/predict';
 
     async function setupCamera() {
       try {
