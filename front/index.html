@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Waste Classifier</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary-dark': '#1e40af',
+            'primary-light': '#3b82f6',
+            'success': '#10b981',
+            'danger': '#ef4444',
+            'background': '#f1f5f9',
+            'card-light': '#ffffff',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4/3;
+      max-width: 450px;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .focus-box {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 60%;
+      height: 45%;
+      transform: translate(-50%, -50%);
+      border: 3px solid #3b82f6;
+      border-radius: 14px;
+      box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+
+</head>
+<body class="p-4 sm:p-8">
+  <div class="max-w-4xl w-full flex flex-col items-center gap-8">
+    <header class="text-center">
+      <h1 class="text-4xl font-extrabold text-primary-dark mb-2">♻️ Smart Waste Classifier</h1>
+      <p class="text-xl text-gray-500 font-light">Identify & categorize waste instantly.</p>
+    </header>
+
+    <main class="w-full flex flex-col lg:flex-row justify-center items-start gap-8">
+
+      <!-- CAMERA SECTION  -->
+      <div class="w-full lg:w-1/2 p-6 bg-card-light rounded-2xl shadow-xl hover:shadow-2xl border border-gray-100">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">Live Scan Area</h2>
+
+        <div class="video-container rounded-xl overflow-hidden shadow-lg mb-4">
+          <video id="camera" autoplay playsinline></video>
+          <div class="focus-box"></div>
+        </div>
+
+        <canvas id="snapshot" class="hidden"></canvas>
+
+        <button id="captureBtn"
+          class="w-full py-3 rounded-xl font-bold text-white bg-primary-light hover:bg-primary-dark transition-all duration-300 shadow-md hover:shadow-lg">
+          Capture & Predict
+        </button>
+
+        <div class="loader hidden mt-4 flex items-center justify-center" id="loader">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-light"></div>
+          <span class="ml-3 text-primary-dark font-medium">Analyzing...</span>
+        </div>
+      </div>
+
+      <!-- RESULT SECTION -->
+      <div class="w-full lg:w-1/2 p-6 bg-card-light rounded-2xl shadow-xl border border-gray-100 hidden" id="croppedContainer">
+        <h2 class="text-2xl font-semibold text-gray-700 mb-4 text-center">Analysis Result</h2>
+
+        <div class="flex flex-col items-center">
+          <img id="croppedImage" src="" alt="Captured waste object"
+            class="max-w-full h-auto rounded-lg mb-4 border-2 border-primary-light shadow-md" />
+
+          <div class="w-full text-center py-3 px-4 rounded-xl">
+            <div class="text-3xl font-extrabold" id="result-display"></div>
+            <div class="text-lg font-medium text-gray-600 mt-1" id="confidence-display"></div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <footer class="mt-12 text-sm text-gray-400">© 2025 AI-Powered Recycling System</footer>
+
+  <script>
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('snapshot');
+    const loader = document.getElementById('loader');
+    const captureBtn = document.getElementById('captureBtn');
+    const croppedContainer = document.getElementById('croppedContainer');
+    const croppedImage = document.getElementById('croppedImage');
+    const resultDisplay = document.getElementById('result-display');
+    const confidenceDisplay = document.getElementById('confidence-display');
+
+    const cropPercentW = 0.60;
+    const cropPercentH = 0.45;
+    const SERVER_URL = 'http://127.0.0.1:5000/predict';
+
+    async function setupCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        video.srcObject = stream;
+        video.onloadedmetadata = () => video.play();
+      } catch (error) {
+        croppedContainer.classList.remove('hidden');
+        resultDisplay.textContent = '❌ Camera Access Blocked';
+        confidenceDisplay.textContent = 'Enable camera permissions.';
+      }
+    }
+
+    function updateResultUI(result, confidence, color) {
+      resultDisplay.textContent = result;
+      confidenceDisplay.textContent = "Confidence: " + confidence;
+      resultDisplay.className = `text-3xl font-extrabold text-${color}`;
+      confidenceDisplay.className = "text-lg font-medium text-gray-600 mt-1";
+    }
+
+    async function captureImage() {
+      captureBtn.disabled = true;
+      loader.classList.remove('hidden');
+      croppedContainer.classList.add('hidden');
+
+      const offsetX = (1 - cropPercentW) / 2;
+      const offsetY = (1 - cropPercentH) / 2;
+
+      const context = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const cropX = canvas.width * offsetX;
+      const cropY = canvas.height * offsetY;
+      const cropW = canvas.width * cropPercentW;
+      const cropH = canvas.height * cropPercentH;
+
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = cropW;
+      croppedCanvas.height = cropH;
+      croppedCanvas.getContext('2d').drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+      croppedImage.src = croppedCanvas.toDataURL('image/jpeg');
+      croppedContainer.classList.remove('hidden');
+
+      croppedCanvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append('file', blob, 'capture.jpg');
+
+        try {
+          const response = await fetch(SERVER_URL, { method: 'POST', body: formData });
+          const data = await response.json();
+
+          captureBtn.disabled = false;
+          loader.classList.add('hidden');
+
+          if (data.error) {
+            updateResultUI("❌ Error", data.error, "danger");
+          } else {
+            updateResultUI(data.predicted_class, data.confidence, "success");
+          }
+
+        } catch (err) {
+          captureBtn.disabled = false;
+          loader.classList.add('hidden');
+          updateResultUI("⚠️ Server Not Responding", "Check your backend", "danger");
+        }
+      }, 'image/jpeg', 0.9);
+    }
+
+    captureBtn.addEventListener('click', captureImage);
+    setupCamera();
+  </script>
+</body>
+</html>
